@@ -1,0 +1,4 @@
+* text=auto
+
+# Keep .reg files byte-for-byte (Windows CRLF line endings), so raw downloads still import cleanly
+*.reg -text
