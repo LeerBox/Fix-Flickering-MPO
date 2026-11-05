@@ -1,39 +1,85 @@
+<div align="center">
+
 # Fix-Flickering-MPO
 
-Fix screen flickering on Windows 11 and 10 by turning off **Multiplane Overlay (MPO)**. It's one registry value and one restart, and it's fully reversible.
+**Stop screen flickering on Windows 10 and 11 by turning off Multiplane Overlay (MPO).**
 
-I made this after **AdGuard for Windows** started making my screen flicker. This change fixed it, and AdGuard keeps running as normal.
+One registry value · One restart · Undo anytime
 
-**Download:** [Fix-Flickering-MPO.reg](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest/download/Fix-Flickering-MPO.reg) · [Undo-Fix-Flickering-MPO.reg](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest/download/Undo-Fix-Flickering-MPO.reg)
+[![Latest release](https://img.shields.io/github/v/release/LeerBox/Fix-Flickering-MPO?label=release&color=2ea44f)](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest)
+[![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)](#compatibility)
+[![License: MIT](https://img.shields.io/github/license/LeerBox/Fix-Flickering-MPO?color=blue)](LICENSE)
+
+[![Download the fix](https://img.shields.io/badge/Download-Fix-2ea44f?style=for-the-badge)](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest/download/Fix-Flickering-MPO.reg)
+&nbsp;
+[![Download the undo file](https://img.shields.io/badge/Download-Undo-6e7781?style=for-the-badge)](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest/download/Undo-Fix-Flickering-MPO.reg)
+
+[Quick start](#quick-start) · [How it works](#how-it-works) · [Verify](#verify) · [Undo](#undo) · [Troubleshooting](#troubleshooting) · [FAQ](#faq)
+
+</div>
 
 ---
 
-## The problem
+## Overview
 
-With AdGuard for Windows running, the screen flickers.
+My screen kept flickering while **AdGuard for Windows** was running. Turning off a Windows display feature called **Multiplane Overlay (MPO)** fixed it, and AdGuard keeps running as normal.
 
-Other apps can cause the same kind of flicker. It usually looks like one of these:
+This repo packages that fix, a one-click undo, and what you should know before you use it.
 
-- flickering or black flashes on the desktop or inside an app window
-- flicker or stutter while moving or resizing windows
-- flicker in videos, browsers, or streaming and remote desktop windows
-- problems that only show up with more than one monitor, especially at different refresh rates
+> [!NOTE]
+> This is the same registry value NVIDIA provides as its official workaround for MPO flicker ([support article 5157](https://nvidia.custhelp.com/app/answers/detail/a_id/5157)).
 
-If one of these matches what you see, MPO is the usual cause.
+## Is this for you?
 
-## Why it happens
+The fix is likely to help if you see any of these:
 
-Normally the **Desktop Window Manager (DWM)**, the part of Windows that draws the desktop, combines all your windows into one image and sends it to the monitor.
+- The screen flickers while AdGuard for Windows is running
+- Black flashes on the desktop or inside app windows
+- Flicker or stutter while moving or resizing windows
+- Flicker in videos, browsers, or streaming and remote desktop windows
+- Problems that only appear with more than one monitor, especially at different refresh rates
 
-With **Multiplane Overlay (MPO)**, Windows hands part of that job to the graphics card's display hardware instead. The card gets separate layers, called planes, such as a video and the rest of the desktop, and combines them as the picture goes out to the monitor. That saves power and lowers latency. But some combinations of graphics card, driver, monitor and app don't handle it well, and the result is flicker.
+## Quick start
 
-It's a known problem. NVIDIA ships this same registry value (as `mpo_disable.reg`) as its official workaround: [NVIDIA support article 5157](https://nvidia.custhelp.com/app/answers/detail/a_id/5157).
+1. **Download** [`Fix-Flickering-MPO.reg`](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest/download/Fix-Flickering-MPO.reg).
+2. **Double-click** it, then click **Yes** → **Yes** → **OK**.
+3. **Restart** your PC.
 
-In my case, AdGuard is what set it off. The fix doesn't change anything in AdGuard. It turns MPO off, so you don't need to uninstall or reconfigure anything.
+> [!IMPORTANT]
+> The fix takes effect only after a restart.
 
-## What the fix does
+> [!TIP]
+> Your browser may warn that `.reg` files can harm your device. That's a generic warning for registry files. Open this one in Notepad and you'll see it's only four lines.
 
-[`Fix-Flickering-MPO.reg`](Fix-Flickering-MPO.reg) is four lines:
+<details>
+<summary><b>Prefer the command line?</b></summary>
+
+From a terminal opened as administrator:
+
+```bat
+reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v OverlayTestMode /t REG_DWORD /d 5 /f
+```
+
+Then restart your PC.
+
+</details>
+
+## How it works
+
+Windows has two ways to put together the picture you see. By default it uses **MPO**: the graphics card gets separate layers, such as a video and the rest of the desktop, and combines them as the image goes out to the monitor. That saves power and lowers latency. But some combinations of graphics card, driver, monitor and app don't handle it well, and the result is flicker.
+
+This fix turns MPO off, so Windows combines everything into one image itself before sending it out.
+
+```mermaid
+flowchart LR
+    A[Apps and video] --> B{Multiplane<br/>Overlay}
+    B -->|On, Windows default| C["Graphics card combines<br/>separate layers on the way out<br/>(can flicker on some setups)"]
+    B -->|Off, this fix| D["Windows combines everything<br/>into one image first"]
+    C --> E[Monitor]
+    D --> E
+```
+
+### What the file changes
 
 ```reg
 Windows Registry Editor Version 5.00
@@ -42,57 +88,112 @@ Windows Registry Editor Version 5.00
 "OverlayTestMode"=dword:00000005
 ```
 
-- `Windows Registry Editor Version 5.00` is the header that tells Windows this is a registry file.
-- `[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm]` is the Desktop Window Manager's settings key. It's machine-wide, so it applies to every user and needs administrator rights.
-- `"OverlayTestMode"=dword:00000005` creates a 32-bit value named `OverlayTestMode`, set to `5`, which tells DWM not to use Multiplane Overlay.
+| Line | What it does |
+|---|---|
+| `Windows Registry Editor Version 5.00` | Tells Windows this is a registry file. |
+| `[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Dwm]` | Opens the settings key of the Desktop Window Manager, the part of Windows that draws the desktop. It's machine-wide, so it applies to every user and needs admin rights. |
+| `"OverlayTestMode"=dword:00000005` | Creates a 32-bit value named `OverlayTestMode`, set to `5`, which tells Windows not to use MPO. |
 
 That's the whole change. Nothing is deleted or installed, and nothing runs in the background.
 
-## Apply the fix
+## Trade-offs
 
-1. Download [Fix-Flickering-MPO.reg](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest/download/Fix-Flickering-MPO.reg).
-2. Double-click it. Click **Yes** in the User Account Control prompt, **Yes** to confirm, then **OK**.
-3. **Restart your PC.** The change takes effect after a restart.
+| | MPO on (Windows default) | MPO off (this fix) |
+|---|---|---|
+| Who combines the layers | The graphics card | Windows |
+| On affected setups | Flickers | No flicker |
+| GPU work during video | Lowest | Slightly higher (a little less laptop battery life during video) |
+| Borderless games with an overlay on top | Normal input lag | Input lag can be slightly higher |
+| AdGuard and other apps | Work normally | Work normally |
 
-Your browser may warn that `.reg` files can harm your device. That's a generic warning for registry files. You can open this one in Notepad and check that it contains only the four lines above.
+## Verify
 
-Or, from a terminal opened as administrator:
-
-```bat
-reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v OverlayTestMode /t REG_DWORD /d 5 /f
-```
-
-## Undo the fix
-
-1. Download [Undo-Fix-Flickering-MPO.reg](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest/download/Undo-Fix-Flickering-MPO.reg).
-2. Double-click it, then **Yes**, **Yes**, **OK**.
-3. Restart your PC.
-
-It deletes the `OverlayTestMode` value, which puts Windows back to its default with MPO on. From an administrator terminal:
-
-```bat
-reg delete "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v OverlayTestMode /f
-```
-
-## Check if the fix is on
+Run this in any terminal:
 
 ```bat
 reg query "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v OverlayTestMode
 ```
 
-- `OverlayTestMode    REG_DWORD    0x5` means the fix is on.
-- `ERROR: The system was unable to find the specified registry key or value.` means the fix is off (the Windows default).
+| Output | Meaning |
+|---|---|
+| `OverlayTestMode    REG_DWORD    0x5` | The fix is on. |
+| `ERROR: The system was unable to find the specified registry key or value.` | The fix is off (Windows default). |
 
-Don't go by `dxdiag`. Its `MPO MaxPlanes` line can still show a number above 1 after the fix. On the PC below it still shows 3, and the flicker is gone.
+> [!NOTE]
+> Don't rely on `dxdiag`. Its `MPO MaxPlanes` line can still show a number above 1 with the fix on. On the test PC it shows 3, and the flicker is gone.
 
-## Side effects
+## Undo
 
-- **Slightly more GPU work during video playback**, because Windows draws the desktop the regular way again. On a desktop PC you won't notice it. On a laptop, battery life during video can drop a little.
-- **Windowed and borderless games** can get a little more input lag while an overlay, such as Discord, Steam or a notification, is drawn on top of them.
+1. **Download** [`Undo-Fix-Flickering-MPO.reg`](https://github.com/LeerBox/Fix-Flickering-MPO/releases/latest/download/Undo-Fix-Flickering-MPO.reg).
+2. **Double-click** it, then click **Yes** → **Yes** → **OK**.
+3. **Restart** your PC.
 
-AdGuard and your other apps keep working as before.
+It deletes `OverlayTestMode`, which puts Windows back to its default with MPO on.
 
-## Tested on
+<details>
+<summary><b>Prefer the command line?</b></summary>
+
+From a terminal opened as administrator:
+
+```bat
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v OverlayTestMode /f
+```
+
+Then restart your PC.
+
+</details>
+
+## Troubleshooting
+
+| What you see | What to do |
+|---|---|
+| Nothing changed after applying the fix | Make sure you restarted, then run the check in [Verify](#verify). |
+| The check doesn't show `0x5` | Apply the fix again and click **Yes** on the administrator prompt. |
+| The check shows `0x5`, but the screen still flickers | Your flicker may have a different cause. Some people also report that certain Windows 11 24H2 and 25H2 builds ignore this value. Undo the fix and update your graphics driver. |
+| The flicker came back after a Windows update | Run the check and apply the fix again if needed. |
+
+Still stuck? [Open an issue](https://github.com/LeerBox/Fix-Flickering-MPO/issues) with your Windows build, graphics card and driver version.
+
+## FAQ
+
+<details>
+<summary><b>Is it safe?</b></summary>
+
+It changes one registry value, it's the same workaround NVIDIA provides, and the undo file removes it completely.
+
+</details>
+
+<details>
+<summary><b>Do I need an NVIDIA graphics card?</b></summary>
+
+No. MPO is a Windows feature and Windows itself reads this value, so it applies to NVIDIA, AMD and Intel graphics alike.
+
+</details>
+
+<details>
+<summary><b>Do I have to uninstall AdGuard?</b></summary>
+
+No. AdGuard keeps running. Only MPO is turned off.
+
+</details>
+
+<details>
+<summary><b>Why is it called "OverlayTestMode"?</b></summary>
+
+That's the name Windows uses internally. Microsoft doesn't document the value, but it's the one NVIDIA tells its users to set for this problem.
+
+</details>
+
+<details>
+<summary><b>Will it survive updates?</b></summary>
+
+It's a normal registry value, so it should. If the flicker comes back, for example after a major Windows update, run the check in [Verify](#verify) and apply the fix again if needed.
+
+</details>
+
+## Compatibility
+
+It should work on Windows 10 and 11 with any graphics card, because MPO is part of Windows. Tested on:
 
 | | |
 |---|---|
@@ -101,32 +202,19 @@ AdGuard and your other apps keep working as before.
 | Monitors | 2 (main monitor at about 280 Hz) |
 | App that caused the flicker | AdGuard for Windows 8.0.5595 |
 
-## Still flickering?
-
-- Make sure you restarted after applying the fix.
-- Run the check above and confirm it shows `0x5`.
-- Some people report that `OverlayTestMode` has no effect on certain Windows 11 24H2 and 25H2 builds. It works on the build listed above.
-- If nothing changes, your flicker probably has a different cause. Run the undo file to put Windows back to default, and try updating your graphics driver.
-
-## FAQ
-
-**Is it safe?**
-It changes one registry value, it's the same workaround NVIDIA provides, and the undo file removes it completely.
-
-**Do I need an NVIDIA graphics card?**
-No. MPO is a Windows feature and Windows itself reads this value, so it applies to NVIDIA, AMD and Intel graphics alike.
-
-**Do I have to uninstall AdGuard?**
-No. AdGuard keeps running. Only MPO is turned off.
-
-**Will it survive updates?**
-It's a normal registry value, so it should. If the flicker comes back, for example after a major Windows update, run the check above and apply the fix again if needed.
-
 ## Credits
 
-- [LeerBox](https://github.com/LeerBox) found that this fixes the AdGuard flicker, tested it, and made this repo.
-- NVIDIA published the `OverlayTestMode` value as an official workaround in [support article 5157](https://nvidia.custhelp.com/app/answers/detail/a_id/5157).
+- **[LeerBox](https://github.com/LeerBox)** found that this fixes the AdGuard flicker, tested it, and made this repo.
+- **NVIDIA** published the `OverlayTestMode` value as an official workaround in [support article 5157](https://nvidia.custhelp.com/app/answers/detail/a_id/5157).
 
 ## License
 
-[MIT](LICENSE)
+Released under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+
+If this fixed your flicker, a ⭐ helps other people find it.
+
+</div>
